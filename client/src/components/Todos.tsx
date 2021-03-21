@@ -11,7 +11,8 @@ import {
   Icon,
   Input,
   Image,
-  Loader
+  Loader,
+  Select
 } from 'semantic-ui-react'
 
 import { createTodo, deleteTodo, getTodos, patchTodo } from '../api/todos-api'
@@ -27,13 +28,17 @@ interface TodosState {
   todos: Todo[]
   newTodoName: string
   loadingTodos: boolean
+  sortby: string
+  order: string
 }
 
 export class Todos extends React.PureComponent<TodosProps, TodosState> {
   state: TodosState = {
     todos: [],
     newTodoName: '',
-    loadingTodos: true
+    loadingTodos: true,
+    sortby: 'name',
+    order: 'ascending'
   }
 
   handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,7 +69,7 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
     try {
       await deleteTodo(this.props.auth.getIdToken(), todoId)
       this.setState({
-        todos: this.state.todos.filter(todo => todo.todoId != todoId)
+        todos: this.state.todos.filter((todo) => todo.todoId != todoId)
       })
     } catch {
       alert('Todo deletion failed')
@@ -107,7 +112,7 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
         <Header as="h1">TODOs</Header>
 
         {this.renderCreateTodoInput()}
-
+        {this.renderChooseSortOrder()}
         {this.renderTodos()}
       </div>
     )
@@ -138,11 +143,119 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
     )
   }
 
+  sortTodosByName = () => {
+    this.setState({
+      todos: this.state.todos.sort((first: Todo, second: Todo) => {
+        const ascending_multiplier = this.state.order == 'ascending' ? 1 : -1
+        const first_name: string = first.name.toLowerCase()
+        const second_name: string = second.name.toLowerCase()
+        if (first_name < second_name) {
+          return -1 * ascending_multiplier
+        }
+        if (first_name > second_name) {
+          return 1 * ascending_multiplier
+        }
+        return 0
+      })
+    })
+  }
+
+  sortTodosByCreated = () => {
+    this.setState({
+      todos: this.state.todos.sort((first: Todo, second: Todo) => {
+        const ascending_multiplier = this.state.order == 'ascending' ? 1 : -1
+        const first_created: string = first.createdAt.toLowerCase()
+        const second_created: string = second.createdAt.toLowerCase()
+        if (first_created < second_created) {
+          return -1 * ascending_multiplier
+        }
+        if (first_created > second_created) {
+          return 1 * ascending_multiplier
+        }
+        return 0
+      })
+    })
+  }
+
+  sortTodosByDueDate = () => {
+    this.setState({
+      todos: this.state.todos.sort((first: Todo, second: Todo) => {
+        const ascending_multiplier = this.state.order == 'ascending' ? 1 : -1
+        const first_dueDate: string = first.dueDate.toLowerCase()
+        const second_dueDate: string = second.dueDate.toLowerCase()
+        if (first_dueDate < second_dueDate) {
+          return -1 * ascending_multiplier
+        }
+        if (first_dueDate > second_dueDate) {
+          return 1 * ascending_multiplier
+        }
+        return 0
+      })
+    })
+  }
+
+  sortTodos = () => {
+    if (this.state.sortby == 'name') {
+      this.sortTodosByName()
+    } else if (this.state.sortby == 'createdAt') {
+      this.sortTodosByCreated()
+    } else if (this.state.sortby == 'dueDate') {
+      this.sortTodosByDueDate()
+    }
+  }
+
+  setSortBy = (e: any, { value }: any) => {
+    this.setState({
+      sortby: value
+    })
+  }
+
+  setOrder = (e: any, { value }: any) => {
+    this.setState({
+      order: value
+    })
+  }
+
+  renderChooseSortOrder() {
+    const sortByItems = [
+      { text: 'name', value: 'name', key: 'name' },
+      { text: 'dueDate', value: 'dueDate', key: 'dueDate' },
+      { text: 'createdAt', value: 'createdAt', key: 'createdAt' }
+    ]
+    const sortOrder = [
+      { text: 'Ascending', value: 'ascending', key: 'asc' },
+      { text: 'Descending', value: 'descending', key: 'desc' }
+    ]
+    return (
+      <Grid>
+        <Grid.Row key="selectors">
+          <Grid.Column key="sort-by" width={3}>
+            <Select
+              placeholder="Sort By"
+              options={sortByItems}
+              onChange={this.setSortBy}
+              value={this.state.sortby}
+            />
+          </Grid.Column>
+          <Grid.Column key="sort-order">
+            <Select
+              placeholder="Sort Order"
+              options={sortOrder}
+              onChange={this.setOrder}
+              value={this.state.order}
+            />
+          </Grid.Column>
+        </Grid.Row>
+      </Grid>
+    )
+  }
+
   renderTodos() {
+    this.sortTodos()
+
     if (this.state.loadingTodos) {
       return this.renderLoading()
     }
-
     return this.renderTodosList()
   }
 
